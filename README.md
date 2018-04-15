@@ -5,5 +5,6 @@
 
 [白葡萄酒质量数据-R](https://stonelin.github.io/myUdaDAAProj/r/r_report.html)
 
-[泰坦尼克号遇难人数展示-数据可视化-报告](https://stonelin.github.io/myUdaDAAProj/visualization/README.md)
+[泰坦尼克号遇难人数展示-数据可视化-报告](https://stonelin.github.io/myUdaDAAProj/visualization/README.html)
+
 [泰坦尼克号遇难人数展示-数据可视化-展示](https://stonelin.github.io/myUdaDAAProj/visualization/index.html)
