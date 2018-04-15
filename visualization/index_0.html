@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="dist/d3.v3.min.js"></script>
+  <script src="dist/dimple.v2.0.0.min.js"></script>
+  <style type="text/css">
+    h2 {
+      text-align: center;
+    }
+    #box {
+        margin-left:15%;
+    }
+    #box button {
+      margin: 5px;
+      padding: 5px;
+      font-size: 1.25em;
+      color: grey;
+      background-color: lightblue;
+      border-color: lightblue;
+      border-radius:0.25em;
+    }
+    #box #percent_switcher{
+      margin-right: 45px;
+    }
+    #percent_switcher.on{
+      opacity: 1;
+    }
+    #percent_switcher.off{
+      opacity: 0.5;
+    }
+    .field_choser{
+      margin: 5px;
+      opacity: 0.5;
+    }
+    .field_choser.on{
+      opacity: 1;
+    }
+
+  </style>
+    <script type="text/javascript">
+      function draw(data) {
+          /*
+            初始化svg
+          */
+          "use strict";
+          var margin = 75,
+              width = 1400 - margin,
+              height = 600 - margin;
+          var radius=5,
+            color="blue";
+          
+          d3.select("body")
+            .append("h2")
+            .attr("class", "chart_title");
+
+          // 创建操作按钮容器
+          d3.select("body")
+            .append("div")
+            .attr("id", "box");
+
+          var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin)
+            .attr("height", height + margin)
+            .append('g')
+            .attr('class','chart');
+
+          // 设置标题
+          d3.select(".chart_title")
+            .text("泰坦尼克号乘客生还数据");
+
+          // 绘图
+          function update(){
+            var x_field = d3.select(".field_choser.on")
+                            .text()
+                            .split("-");
+            var is_percent = d3.select("#percent_switcher")
+                               .attr("class") == "on";
+            //清除之前数据
+            svg.select("*").remove();
+            //使用dimple.js创建表格
+            var myChart = new dimple.chart(svg, data);
+            myChart.setBounds(200, 30, 800, 400);
+            myChart.defaultColors = [
+                new dimple.color("lightBlue"),
+                new dimple.color("lightGrey"),
+              ];
+            var x = myChart.addCategoryAxis("x", x_field);
+            x.addOrderRule(["0-16", "17-40", "41-60", ">61", "未知"])
+
+            if(is_percent){
+              var y = myChart.addPctAxis("y", "PassengerId");
+              y.title = "passenger count percent";
+            }else{
+              var y = myChart.addMeasureAxis("y", "PassengerId");
+              y.title = "count"
+            }
+            var mySeries = myChart.addSeries(["Survived"], dimple.plot.bar);
+            mySeries.aggregate = dimple.aggregateMethod.count;
+            mySeries.addOrderRule(["生还", "遇难"]);
+            // var mySeries = myChart.addSeries(["Sex"], dimple.plot.bar);
+
+            // myChart.addSeries(null, dimple.plot.line, [x, y2])
+            // myChart.addSeries(null, dimple.plot.scatter, [x, y2])
+            myChart.addLegend(150, 10, 1000, 30, "right");
+            myChart.draw(800);
+          }
+
+          // 创建交互式操作
+          //添加百分比/人数切换开关
+          d3.select("#box")
+            .append("button")
+            .attr("id", "percent_switcher")
+            .attr("class", "on")
+            .text("百分比/人数切换")
+            .on("click", function(e){
+              if(this.getAttribute("class")=="on"){
+                this.setAttribute("class", "off");
+                update(["Pclass", "Sex"]);
+              }
+              else{
+                this.setAttribute("class", "on");
+                update(["Pclass", "Sex"]);
+              }
+            });
+
+          // 添加选择字段开关
+          d3.select("#box")
+            .append("button")
+            .attr("class", "field_choser on")
+            .text("Sex");
+          d3.select("#box")
+            .append("button")
+            .attr("class", "field_choser")
+            .text("Age-Sex");
+          d3.select("#box")
+            .append("button")
+            .attr("class", "field_choser")
+            .text("Pclass-Sex");
+
+          // 为选择字段开关绑定事件
+          d3.selectAll(".field_choser")
+            .on("click", function(e){
+              d3.selectAll(".field_choser")
+                .attr("class", "field_choser");
+              this.setAttribute("class", "field_choser on");
+              update();
+
+            });
+          // 绘图
+          update();
+        };
+      </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the TSV file
+    and pass the contents of it to the draw function
+    */
+  d3.csv("Titanic.csv", function(d){
+    if(d["Survived"] == 1)
+      d["Survived"] = "生还";
+    else
+      d["Survived"] = "遇难";
+    var age = d["Age"];
+    if(age > 0 && age < 15)
+      d["Age"] = "0-16";
+    else if(age > 16 && age <= 40)
+      d["Age"] = "17-40";
+    else if(age>40 && age<=60)
+      d["Age"] = "41-60";
+    else if(age>60)
+      d["Age"] = ">61";
+    else
+      d["Age"] = "未知";
+
+    return d;
+  }, draw);
+  </script>
+</body>
+</html>

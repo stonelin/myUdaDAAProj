@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://dimplejs.org/dist/dimple.v2.0.0.min.js"></script>
+  <style type="text/css">
+    h2 {
+      text-align: center;
+    }
+    circle {
+        opacity: 0.4;
+        stroke: none;
+    }
+    p {
+      padding-right: 3%;
+      padding-left: 3%;
+      text-indent: 35px;
+    }
+  </style>
+    <script type="text/javascript">
+      function get_title(field){
+        return {
+          "name": "人数",
+          "weight": "体重 (磅)",
+          "height": "身高(英尺)",
+          "handedness": "左手还是右手",
+          "avg": "平均打击率",
+          "HR": "平均全垒打数"
+        }[field]
+      }
+
+      function draw(data) {
+          /*
+            初始化svg
+          */
+          "use strict";
+          var margin = 75,
+              width = 1400 - margin,
+              height = 600 - margin;
+          var radius=5,
+            color="blue";
+          
+          d3.select("body")
+            .append("h2")
+            .attr("class", "chart_title");
+          // 设置标题
+          d3.select(".chart_title")
+            .text("棒球选手的表现");
+          d3.select("body")
+            .append("p")
+            .attr("class", "desc")
+            .text("")
+
+          var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin)
+            .attr("height", height + margin)
+            .append('g')
+            .attr('class','chart');
+
+
+          //使用dimple.js创建表格
+          var myChart = new dimple.chart(svg, data);
+
+          // myChart.setBounds(60, 30, 1000, 330)
+          var x = myChart.addMeasureAxis("x", "avg")
+                         .title = "avg";
+          var y = myChart.addMeasureAxis("y", "HR")
+                         .title = "HR";
+          var series = myChart.addSeries(["name", "handedness"], dimple.plot.bubble)
+          var myLegend = myChart.addLegend(150, 10, 600, 30, "left");
+          myChart.draw();
+          // 解除legend和chart的绑定
+          myChart.legends = [];
+          myLegend.shapes.selectAll("rect")
+                         .on("click", function(e){
+                            myChart.data = dimple.filterData(
+                              data, "handedness", e.key);
+                            myChart.draw(800);
+                         });
+
+        };
+      </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the TSV file
+    and pass the contents of it to the draw function
+    */
+  d3.csv("baseball_data.csv", function(d){
+      // d["weight"] = parseInt(d["weight"]/5)*5;
+      d["avg"] = parseFloat(d["avg"]);
+      //weight数据中5的整数倍的数据比其他多很多，为了让图更直观, 进行处理下
+      var w_start = parseInt(d["weight"]/5)*5;
+      d["weight"] = w_start /*+ "-" + (w_start+4)*/;
+      return d;
+    }, draw);
+  </script>
+</body>
+</html>

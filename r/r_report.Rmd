@@ -1,0 +1,647 @@
+---
+title: "白葡萄酒质量数据探索分析"
+output: html_notebook
+---
+# 白葡萄酒质量数据
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(corrplot)
+library(scales)
+data <- read.csv("/Users/mengyu/script/uda/r/wineQualityWhites.csv")
+
+```
+
+## 单一变量数据部分
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+nrow(data)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+str(data)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+head(data)
+```
+
+数据总共有12个变量(忽略X)，4898条记录
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(subset(data, !is.na(quality)), aes(x=quality))+
+    geom_histogram(binwidth = 1)+
+    scale_x_continuous(breaks = seq(3,9,1))
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(data$quality)
+```
+
+quality为5-6的品种占了绝大多数，6最多,其次是5和7。没有小于2的也没有10。
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=fixed.acidity))+
+    geom_histogram(binwidth = 0.1)+
+    scale_x_continuous(breaks = seq(1, 15, 1))
+```
+
+非挥发性酸长尾存在个别异常值，整体成正态分布，大多数据集中在5到8g/L。
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=volatile.acidity))+
+    geom_histogram(binwidth = 0.01)+
+    scale_x_continuous(breaks = seq(0, 1, 0.1))
+```
+
+挥发性酸整体存在长尾，小于0.5g/L的数据部分呈正态分布。
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=citric.acid))+
+    geom_histogram(binwidth = 0.01)+
+    scale_x_continuous(breaks = seq(0, 1, 0.1))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+nrow(subset(data, citric.acid==0))
+```
+
+柠檬酸含量长尾处有异常值，小于1g/L的数据呈正态分布。有19种没有检测出柠檬酸含量，在0.45-0.5之间以及0.7-0.75之间有异常高的值。
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=residual.sugar))+
+    geom_histogram(binwidth = 1)+
+    scale_x_continuous(breaks = seq(0, 30, 1), limits = c(0, 30))
+```
+
+含糖量不成正态分布，进行变换
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(data$residual.sugar)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=residual.sugar))+
+    geom_histogram(bins = 30)+
+    scale_x_log10(breaks=c(1, 3, 7,8,10,18, 45))
+# subset(data, residual.sugar>45)
+```
+
+log10(residual.sugar) 可以看出含糖量在1-2 g/L的品种最多，其次是2-18g/L，而大于45g/L（甜葡萄酒）非常少仅一种(也可能是异常值)。
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=chlorides))+
+    geom_histogram(binwidth = 0.001)+
+    scale_x_continuous()
+```
+
+含盐量长尾有大量异常值，小于0.1的部分呈正态分布
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=free.sulfur.dioxide))+
+    geom_histogram(binwidth = 1)+
+    scale_x_continuous()
+```
+
+游离二氧化硫长尾少数异常值， 100以内呈正态分布
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=total.sulfur.dioxide))+
+    geom_histogram()
+```
+
+对总二氧化硫含量进行变换
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=total.sulfur.dioxide))+
+    geom_histogram()+
+    scale_x_sqrt()
+```
+
+sqrt变换后基本呈正太分布
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=density))+
+    geom_histogram(binwidth = 0.001)+
+    scale_x_continuous()
+```
+
+density 密度长尾有少量异常值，大概呈正态分布
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=pH)) +
+    geom_histogram(binwidth = 0.01)
+```
+
+ph值呈正态分布，整体为酸性
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(data$pH)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=sulphates)) +
+    geom_histogram(binwidth = 0.01)
+```
+
+硫酸盐含量整体呈正态分布
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol)) +
+    geom_histogram(binwidth = 0.1)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# 自定义变化函数: 数值减去8.5后的平方根
+alcohol_trans = function() trans_new('alcohol_trans',
+                     transform = function(x) (x-8.5)^(1/2),
+                     inverse = function(x) x^2+8.5)
+# 对alcohol进行变换
+ggplot(data, aes(x = alcohol)) +
+    geom_histogram(binwidth = 0.05)+
+    scale_x_continuous(trans=alcohol_trans(), breaks = c(8.6, 9, 10, 11, 12,13,14))
+```
+
+变换之后整体大概呈正态分布，但不是很理想
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(data$alcohol)
+```
+
+平均值略低于中位数，酒精度偏低的相对稍多一些
+
+## 单变量分析
+### What is the structure of your dataset?
+1. 数据包含**12**个变量 **4898**条数据,变量如下
+
+        fixed.acidity (非挥发性酸)
+        volatile.acidity（挥发性酸）
+        citric.acid（柠檬酸）
+        residual.sugar（残余糖分）
+        chlorides（氯化物，含盐量）
+        free.sulfur.dioxide（游离二氧化硫）
+        total.sulfur.dioxide (总二氧化硫)
+        density（密度）
+        pH
+        sulphates(硫酸盐)
+        alcohol（酒精度）
+        quality (评分)
+
+2. quality数据分值越高酒的质量越高。
+分析结果
+
+    - quality最小值为3，最大值为9平均值5.878，中位数为6，整体评分较好
+    - 有19种没有检测到柠檬酸含量,不排除异常值
+    - 最大pH值为3.820，所有葡萄酒都为酸性
+    - 大约75%的葡萄酒含糖量低于9.9g/L,仅一种为甜葡萄酒(>45g/L)
+
+### What is/are the main feature(s) of interest in your dataset?
+quality 质量评级
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+猜测会影响葡萄酒质量的指标有volatile.acidity（挥发性酸含量）, citric.acid（柠檬酸含量）,total.sulfur.dioxide(总二氧化硫含量)，residual.sugar（残余糖分）
+### Did you create any new variables from existing variables in the dataset?
+对residual.sugar（残余糖分）进行log10变化，total.sulfur.dioxide进行sqrt变换，对酒精度进行自定义变换(减去8再取平方根),使其呈正态分布
+
+## 两变量部分
+先整体看下变量之间的关系
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor(data)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# corrplot可以查看所有变量的相关性
+corrplot::corrplot(cor(data))
+```
+
+
+可以知道和quality正相关的变量依次是
+    
+    alcohol（酒精度）,pH，sulphates(硫酸盐)
+负相关的变量有
+    
+    density（密度）
+    chlorides（氯化物，含盐量）
+    volatile.acidity（挥发性酸）
+    total.sulfur.dioxide (总二氧化硫)
+    fixed.acidity (非挥发性酸)
+
+其中属于化学成分的有
+    
+    chlorides(-0.21)
+    volatile.acidity(-0.19)
+    total.sulfur.dioxide(-0.17)
+    fixed.acidity(-0.11)
+    residual.sugar(-0.10)
+    sulphates(0.05)
+    citric.acid(-0.01)
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=alcohol)) +
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color='blue')+
+    stat_summary(func.y="mean", geom="point", color="red")
+```
+
+如上图通过中位数可以看出整体上quality和alcohol是正相关的。
+当quality值为5时，箱线图顶部出现大量异常值，这些异常值会导致alcohol的中位数比正常时低。
+当quality为5的时候alcohol的中值和平均值都低于quality=3或者4，猜测quality=3或者4的葡萄酒可能是受其他特征影响。
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=density))+
+    ylim(0.985, 1.005)+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+```
+
+当quality大于5时，density中位数和quality呈负相关，小于5时相关性不明显，猜测quality=3或者4的葡萄酒可能是受其他特征影响。
+当quality为7时顶部有大量异常值出现。
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=chlorides))+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+```
+
+当quality比较高时，chlorides相对低一些，当quality为5或者6时出现大量异常值，顶部异常值更多一些。
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=volatile.acidity))+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+
+```
+
+单看两变量，无法判断出volatile.acidity对quality的影响，当quality为5或6时顶部有大量异常值。
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=total.sulfur.dioxide))+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+
+```
+
+单看两变量，无法判断出total.sulfur.dioxide对quality的影响。当quality为5、6、7时，两端有少量异常值。
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=fixed.acidity))+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+
+```
+
+quality较高时fixed.acidity含量也较高，无法判断出fixed.acidity对quality的影响。当quality为5、6、7时两端都有异常值，当quality为4时顶部有少量异常值。
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=residual.sugar))+
+    ylim(0,30)+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+```
+
+无法判断出residual.sugar对quality的影响，当quality为7时顶部有少量异常值。
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=citric.acid))+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+```
+
+无法判断出citric.acid对quality的影响，当quality为6、7、8时两端均有异常值，当quality为5时，顶部出现异常值。
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=pH)) +
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+```
+
+quality较高时 ph值也较高。当quality为5、6时两端有异常值。
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ ggplot(data, aes(x=factor(quality), y=sulphates))+
+    geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")
+```
+
+无法看出sulphates对quality的影响，当quality为5、6、7时顶部都有不少异常值。
+
+以下是非quality字段的分析
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=density))+
+    ylim(0.985, 1.005)+
+    geom_point(alpha=0.3)+
+    geom_smooth()
+    
+```
+
+density和alcohol呈负相关性
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(y=alcohol, x=residual.sugar))+
+    geom_point(alpha=0.3)+
+    geom_smooth()+
+    scale_x_continuous(breaks = seq(0, 20), limits = c(0, 22))
+```
+
+在不同的residual.sugar下图的趋势不同，将图分为两部分继续分析
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+p1 = ggplot(data, aes(y=alcohol, x=residual.sugar))+
+    geom_point(alpha=0.3)+
+    geom_smooth()+
+    scale_x_continuous(breaks = seq(0, 20), limits = c(0, 3))
+p2 = ggplot(data, aes(y=alcohol, x=residual.sugar))+
+    geom_point(alpha=0.3)+
+    geom_smooth()+
+    scale_x_continuous(breaks = seq(0, 20), limits = c(3, 22))
+# 将两个图并排显示，方便对比
+grid.arrange(p1, p2, nrow=1)
+
+```
+
+当residual.sugar小于3g/L时 alcohol和residual.sugar呈正相关；大于3g/L时，呈负相关
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=residual.sugar, y=density))+
+    geom_point()+
+    geom_smooth()
+```
+
+density和residual.sugar呈明显的正相关。
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=fixed.acidity, y=pH))+
+    geom_point()+
+    geom_smooth()
+```
+
+ph值和fixed.acidity呈明显负相关。
+
+## 两变量分析
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+当quality大于5时 quality和alcohol、ph值呈明显正相关，和density、chlorides、total.sulfur.dioxide、residual.sugar呈负相关；当quality小于5时，quality和alcohol、ph值呈负相关，和chlorides、fixed.acidity负相关，还需要综和分析。
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+density 和 residual.sugar强正相关，系数达到了0.839。density和alcohol强负相关 系数为0.78。pH值和fixed.acidity呈负相关。
+### What was the strongest relationship you found?
+density 和 residual.sugar强正相关，系数达到了0.839。
+
+## 多个变量部分
+和quality相关性最大的两个变量分别是alcohol(正相关)和density(负相关)，并且这两个变量也呈强负相关
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=density, color=factor(quality)))+
+    ylim(0.985, 1.005)+
+    geom_point(alpha=0.4)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "lm", se=FALSE)
+```
+
+
+从上图中可以看到density和alcohol呈负相关，整天上来看越往右下角quality越大，表示density越小alcohol越大，quality越大。
+
+相关图中发现，residual.sugar和density呈强正相关，和alcohol呈强负相关，但和quality呈弱负相关
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=residual.sugar, color=factor(quality)))+
+    ylim(0, 25)+
+    geom_point(alpha=0.5)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "loess", se=FALSE)
+```
+ 
+ 
+ 从图中曲线发现当alcohol大于11时趋势变的平缓
+ 
+ 当alcohol大于11时：
+ 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ cor(subset(data, data$alcohol>11)[,c(5, 12, 13)])
+```
+
+ 当alcohol小于等于11时：
+ 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ cor(subset(data, data$alcohol<=11)[,c(5, 12, 13)])
+```
+
+
+观察相关图中发现，free.sulfur.dioxide和density呈强正相关，和alcohol呈强负相关，但和quality几乎不相关。
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=free.sulfur.dioxide, color=factor(quality)))+
+    ylim(0, 150)+
+    geom_point(alpha=0.5)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "loess", se=FALSE)
+```
+
+
+从上图可以大概可以看出当alcohol大于11时从上到下quality在降低，小于11时不明显，
+
+当alcohol大于11时：
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor(subset(data, data$alcohol>11)[,c(7,13)])
+```
+
+当alcohol大于9且小于等于11：
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor(subset(data, data$alcohol<=11&data$alcohol>9)[,c(7,13)])
+```
+
+当alcohol小于9：
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor(subset(data, data$alcohol<9)[,c(7,13)])
+```
+
+
+在alcohol大于11时，free.sulfur.dioxide和quality的相关系数是0.23；当alcohol小于等于11时，相关系数为0.06;当alcohol小于9时，呈负相关相关系数是-0.10。
+
+
+观察相关图发现，volatile.acidity 和其他变量都没有较强的相关性，结合alcohol一块看一下
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=volatile.acidity, color=factor(quality)))+
+    geom_point(alpha=0.4)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "lm", se=FALSE)
+```
+
+
+可以看出当quality为5时，volatile.acidity和alcohol呈负相关，其他时候都是正相关，另外发现 alcohol小于11时 volatile.acidity越小，quality越高
+
+当alcohol小于等于11时：
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor(subset(data, data$alcohol<=11)[,c(3,13)])
+```
+
+当alcohol大于11时：
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+cor(subset(data, data$alcohol>11)[,c(3,13)])
+```
+
+经计算得知，当alcohol小于11时， volatile.acidity和quality的相关系数是-0.36；当alcohol大于11时 volatile.acidity和quality的相关系数是0.008
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=chlorides, color=factor(quality)))+
+    geom_point(alpha=0.4)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "loess", se=FALSE)
+```
+
+chlorides和alcohol呈负相关，整体上和quality呈负相关
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=total.sulfur.dioxide, color=factor(quality)))+
+    geom_point(alpha=0.4)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "loess", se=FALSE)
+```
+
+total.sulfur.dioxide和alcohol呈负相关
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=total.sulfur.dioxide, y=free.sulfur.dioxide, color=factor(quality)))+
+    geom_point(alpha=0.4)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "lm", se=FALSE)
+```
+
+该图可以看出free.sulfur.dioxide和total.sulfur.dioxide呈正相关
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(y=free.sulfur.dioxide/total.sulfur.dioxide, x=quality))+
+    geom_jitter()+
+    geom_smooth(method = "lm", se=FALSE)
+```
+
+可知quality和free.sulfur.dioxide/total.sulfur.dioxide 是正相关的
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=sulphates, color=factor(quality)))+
+    geom_point(alpha=0.4)+
+    scale_color_brewer(type='div')+
+    geom_smooth(method = "loess", se=FALSE)
+```
+
+sulphates和alcohol相关性不是很大,和quality的关系也不明显
+
+
+
+
+## 多变量分析
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+整体上，当alcohol越大且density越小则quality越大。alcohol和density呈负相关。
+    
+    - 在alcohol大于11时，free.sulfur.dioxide和quality的相关系数是0.23；当alcohol小于等于11时，相关系数为0.06;当alcohol小于9时，呈负相关相关系数是-0.10。
+    
+    - 当alcohol小于11时，volatile.acidity和quality的相关系数是-0.36；当alcohol大于11时 volatile.acidity和quality的相关系数是0.008
+
+    - 在alcohol大于11时residual.sugar和alcohol的相关系数是-0.02；当alcohol小于等于11时 residual.sugar和alcohol的相关系数是-0.44
+
+### Were there any interesting or surprising interactions between features? 
+
+quality不但和某种元素的含量有关系，和多种元素含量的对比也有关系，比如quality和free.sulfur.dioxide/total.sulfur.dioxide 呈正相关
+
+
+### Did you create any models with your dataset? Discuss the strengths and limitations of your model. 
+没有创建预测模型
+
+## 最终的图形
+
+### 图1
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=factor(quality), y=alcohol)) +
+    # geom_jitter(alpha=0.1)+
+    geom_boxplot(alpha=0.2, color='blue', fill="blue")+
+    stat_summary(func.y="mean", geom="point", color="red")+
+    labs(title="alcohol of quality", x="quality")+
+    theme(plot.title=element_text(size=18, hjust = 0.5))
+```
+###  描述1
+通过相关系数图知道和quality相关性最大的属性是alcohol，quality不是连续分布，所以选择箱线图来分析。
+如图可见当quality大于等于**5**时，alcohol和quality呈**明显正相关**。在没有异常值的时候中值和均值相差不多，当quality值为5时，箱线图顶部出现大量异常值且中值比平均值小不少，所以是这些异常值导致alcohol的中位数比正常时低。
+
+### 图2
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=density, color=factor(quality)))+
+    ylim(0.985, 1.005)+
+    geom_point(alpha=0.4)+
+    scale_color_brewer(type='div')+
+    labs(title="density of alcohol by quality",
+         x="alcohol (% by volume)",
+         y="density(g / cm^3)")+
+    theme(plot.title=element_text(size=18, hjust = 0.5))
+```
+
+### 描述2
+如图，点的分布趋势从左上角到右下角，说明density和alcohol呈负相关，即随着alcohol增大density变小。从颜色上看整体趋势从左上角到右下角，颜色逐渐由褐色变成白色和绿色，说明随着alcohol的增大和density的减小，quality越来越好。
+
+### 图3 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(x=alcohol, y=volatile.acidity, color=factor(quality)))+
+    geom_point(alpha=0.5)+
+    scale_color_brewer(type='div')+
+    # geom_smooth(method = "loess", se=FALSE)+
+    labs(title="volatile.acidity of alcohol by quality",
+         x="alcohol (% by volume)",
+         y="volatile.acidity(g/dm^3)")+
+    theme(plot.title=element_text(size=18, hjust = 0.5))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data, aes(y=volatile.acidity, x=factor(quality))) +
+    geom_boxplot(alpha=0.2, color="blue", fill="blue")+
+    facet_wrap(~(alcohol>11))+
+    labs(title="volatile.acidity of quality if alcohol>11",
+        x="quality", 
+        y="volatile.acidity(g/dm^3)")+
+    theme(plot.title=element_text(size=18, hjust = 0.5))
+```
+
+### 描述3
+如上图，quality白色到绿色大多数分布在整个图的右边及下边，当alcohol小于11时，可以看出由上到下颜色趋势是从褐色到白色。说明当alcohol不同时，volatile.acidity对quality的**影响程度是不一样**的。为了更直观的发现差异，对alcohol以11为界，分别做volatile.acidity和quality的箱线图。
+结合箱线图，可以看出当**alcohol小于11**时volatile.acidity和quality**呈负相关**；当**alcohol大于11**时，volatile.acidity和quality**几乎不相关**。
+
+## 最终总结
+
+通过以上分析得出：
+    
+- 对葡萄酒质量影响最大的因素是**alcohol(呈正相关)**和**density(呈负相关)**；在alcohol大于11的时候，free.sulfur.dioxide和质量呈正相关(系数0.23)，当alcohol小于11时，volatile.acidity和quality呈负相关(相关系数-0.36)。
+
+- 原因应该是alcohol会影响葡萄酒的口感，free.sulfur.dioxide(游离二氧化硫)会影响葡萄酒的气味，volatile.acidity(挥发性酸)会影响到葡萄酒的口味。
+
+- 由于相关系数都很低(低于0.5)且是在一定前提条件下，所以用alcohol、free.sulfur.dioxide和volatile.acidity推测quality不是很合适，猜测存在一些组合变量会直接影响葡萄酒的质量。
+
+通过本次项目的学习，对于单个变量的直方图，箱线图，两个变量的散点图的作图能力有了很大提高。并且能够通过图形，发现数据的一些趋势，以及数据的异常点。同时通过对坐标轴进行变换，能够更容易看出数据存在的趋势和问题。
+
+通过之前的分析，有两个问题：一是alcohol，volatile.acidity，free.sulfur.dioxide都会影响红葡萄酒的质量，但是他们与quality的相关系数都比较低，还不到0.5，不是很适合以此建立模型。二是考虑到上述情况，再联想到diamonds数据集的价格预测中价格与克拉的立方根存在很强的相关系数，猜想红葡萄酒的quality会不会也与某个特征的某种变换，或是多个特征的组合存在更号的相关性？这些可以作为后续的进一步尝试。
+
+
+
+

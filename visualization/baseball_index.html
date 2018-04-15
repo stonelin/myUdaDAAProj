@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://dimplejs.org/dist/dimple.v2.0.0.min.js"></script>
+  <style type="text/css">
+    h2 {
+      text-align: center;
+    }
+    circle {
+        opacity: 0.4;
+        stroke: none;
+    }
+  </style>
+    <script type="text/javascript">
+      function get_title(field){
+        return {
+          "name": "人数",
+          "weight": "体重 (磅)",
+          "height": "身高(英尺)",
+          "handedness": "左手还是右手",
+          "avg": "平均打击率",
+          "HR": "平均全垒打数"
+        }[field]
+      }
+
+      function draw(data) {
+          /*
+            初始化svg
+          */
+          "use strict";
+          var margin = 75,
+              width = 1400 - margin,
+              height = 600 - margin;
+          var radius=5,
+            color="blue";
+          
+          d3.select("body")
+            .append("h2")
+            .attr("class", "chart_title");
+
+          var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin)
+            .attr("height", height + margin)
+            .append('g')
+            .attr('class','chart');
+
+          function update(x_name, y_name, category){
+            // 设置标题
+            d3.select(".chart_title")
+              .text("棒球选手 " 
+                + get_title(y_name) 
+                + " VS " + get_title(x_name));
+            svg.select("*").remove();
+
+            //使用dimple.js创建表格
+            var myChart = new dimple.chart(svg, data);
+            // myChart.setBounds(60, 30, 1000, 330)
+            var x = myChart.addCategoryAxis("x", x_name); 
+            x.title = get_title(x_name);
+            var y1 = myChart.addMeasureAxis("y", y_name);
+            y1.title = get_title(y_name);
+
+            var y2 = myChart.addMeasureAxis("y", "name");
+            y2.title = get_title("name");
+
+            // myChart.addSeries(category, dimple.plot.bar, [x, y]);
+            var mySeries = myChart.addSeries(category, dimple.plot.bar, [x, y1]);
+            mySeries.aggregate = dimple.aggregateMethod.avg;
+
+            myChart.addSeries(null, dimple.plot.line, [x, y2])
+            myChart.addSeries(null, dimple.plot.scatter, [x, y2])
+
+            myChart.assignColor("name", "#222222", "#000000", 0.1);
+
+            myChart.draw();
+          }
+          // update("hwrate", "name", "handedness");
+          // update("height", "name");
+          update("height", "HR");
+          // update("height", "weight");
+          // update("handedness", "HR");
+          // update("weight", "avg");
+          // update("height", "avg");
+        };
+      </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  /*
+    Use D3 (not dimple.js) to load the TSV file
+    and pass the contents of it to the draw function
+    */
+  d3.csv("baseball_data.csv", function(d){
+      // d["weight"] = parseInt(d["weight"]/5)*5;
+      d["avg"] = parseFloat(d["avg"]);
+      //weight数据中5的整数倍的数据比其他多很多，为了让图更直观, 进行处理下
+      var w_start = parseInt(d["weight"]/5)*5;
+      d["weight"] = w_start /*+ "-" + (w_start+4)*/;
+      return d;
+    }, draw);
+  </script>
+</body>
+</html>
